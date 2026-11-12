@@ -235,6 +235,7 @@ export const QuickShortcutBar: React.FC<QuickShortcutBarProps> = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
   const handleScroll = () => {
     if (scrollRef.current) {
@@ -251,14 +252,64 @@ export const QuickShortcutBar: React.FC<QuickShortcutBarProps> = ({
     }
   };
 
+  // macOS Dock 포물선 확대 및 부유(TranslateY) 계산
+  const getDockTransform = (index: number) => {
+    if (hoveredIndex === null) {
+      return {
+        scale: 1,
+        translateY: 0,
+        zIndex: 1,
+        diff: 999,
+      };
+    }
+
+    const diff = Math.abs(hoveredIndex - index);
+
+    if (diff === 0) {
+      // 🎯 마우스 호버 중앙 아이콘: 최대 1.45배 확대 & 위로 18px 부유
+      return {
+        scale: 1.45,
+        translateY: -18,
+        zIndex: 40,
+        diff,
+      };
+    } else if (diff === 1) {
+      // 🌊 1단계 인접 아이콘: 1.22배 확대 & 위로 9px 부유
+      return {
+        scale: 1.22,
+        translateY: -9,
+        zIndex: 30,
+        diff,
+      };
+    } else if (diff === 2) {
+      // 🌊 2단계 인접 아이콘: 1.08배 확대 & 위로 3px 부유
+      return {
+        scale: 1.08,
+        translateY: -3,
+        zIndex: 20,
+        diff,
+      };
+    }
+
+    return {
+      scale: 1,
+      translateY: 0,
+      zIndex: 10,
+      diff,
+    };
+  };
+
   return (
-    <div className="relative group/bar max-w-[1800px] mx-auto px-4 sm:px-8 lg:px-12 pt-6 pb-4">
+    <div
+      className="relative group/bar max-w-[1800px] mx-auto px-4 sm:px-8 lg:px-12 pt-2 pb-6 select-none"
+      onMouseLeave={() => setHoveredIndex(null)}
+    >
       {/* 좌측 스크롤 화살표 */}
       {showLeftArrow && (
         <button
           onClick={() => scroll('left')}
           aria-label="이전 바로가기"
-          className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center border border-neutral-700 shadow-xl opacity-0 group-hover/bar:opacity-100 transition duration-200"
+          className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 z-50 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/85 hover:bg-black text-white flex items-center justify-center border border-neutral-700 shadow-2xl opacity-0 group-hover/bar:opacity-100 transition duration-200 hover:scale-110 active:scale-95"
         >
           <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
@@ -269,43 +320,74 @@ export const QuickShortcutBar: React.FC<QuickShortcutBarProps> = ({
         <button
           onClick={() => scroll('right')}
           aria-label="다음 바로가기"
-          className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/80 hover:bg-black text-white flex items-center justify-center border border-neutral-700 shadow-xl opacity-0 group-hover/bar:opacity-100 transition duration-200"
+          className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 z-50 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/85 hover:bg-black text-white flex items-center justify-center border border-neutral-700 shadow-2xl opacity-0 group-hover/bar:opacity-100 transition duration-200 hover:scale-110 active:scale-95"
         >
           <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
       )}
 
-      {/* 가로 스크롤 리스트 */}
+      {/* 가로 스크롤 리스트 (macOS Dock 확대 애니메이션 컨테이너) */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex items-start gap-4 sm:gap-6 lg:gap-8 overflow-x-auto no-scrollbar scroll-smooth py-2 px-1"
+        className="flex items-end gap-3 sm:gap-5 lg:gap-7 overflow-x-auto no-scrollbar scroll-smooth pt-10 pb-4 px-3"
       >
-        {SHORTCUT_ITEMS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onSelectShortcut?.(item)}
-            className="flex-shrink-0 flex flex-col items-center group cursor-pointer text-center focus:outline-none select-none transition-transform duration-200 active:scale-95"
-            style={{ width: 'clamp(68px, 7.5vw, 88px)' }}
-          >
-            {/* 원형 아이콘 컨테이너 */}
-            <div className="relative w-14 h-14 sm:w-16 sm:h-16 lg:w-[72px] lg:h-[72px] rounded-full p-0.5 transition-all duration-300 group-hover:scale-110 group-hover:ring-2 group-hover:ring-[#ff153c] group-hover:shadow-[0_0_16px_rgba(255,21,60,0.5)]">
-              {item.renderIcon()}
+        {SHORTCUT_ITEMS.map((item, index) => {
+          const dock = getDockTransform(index);
 
-              {/* 우측 상단 'N' 신규 배지 */}
-              {item.hasNewBadge && (
-                <div className="absolute -top-1 -right-1 z-10 w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full bg-[#ff153c] text-white text-[10px] sm:text-[11px] font-black flex items-center justify-center shadow-lg border border-black animate-bounce">
-                  N
-                </div>
-              )}
-            </div>
+          return (
+            <button
+              key={item.id}
+              onClick={() => onSelectShortcut?.(item)}
+              onMouseEnter={() => setHoveredIndex(index)}
+              className="flex-shrink-0 flex flex-col items-center group cursor-pointer text-center focus:outline-none select-none relative"
+              style={{
+                width: 'clamp(72px, 7.8vw, 92px)',
+                zIndex: dock.zIndex,
+              }}
+            >
+              {/* 원형 아이콘 컨테이너 (macOS Dock 확대 & 부유 인터랙션) */}
+              <div
+                className={`relative w-14 h-14 sm:w-16 sm:h-16 lg:w-[70px] lg:h-[70px] rounded-full p-0.5 origin-bottom transition-all ${
+                  dock.diff === 0
+                    ? 'ring-2 ring-[#ff153c] shadow-[0_16px_32px_rgba(0,0,0,0.85),0_0_24px_rgba(255,21,60,0.55)]'
+                    : dock.diff === 1
+                    ? 'ring-1 ring-white/40 shadow-[0_10px_22px_rgba(0,0,0,0.7),0_0_12px_rgba(255,255,255,0.2)]'
+                    : dock.diff === 2
+                    ? 'shadow-[0_6px_14px_rgba(0,0,0,0.5)]'
+                    : 'shadow-md'
+                }`}
+                style={{
+                  transform: `scale(${dock.scale}) translateY(${dock.translateY}px)`,
+                  transition:
+                    'transform 0.22s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.22s ease-out, ring-color 0.22s ease-out',
+                }}
+              >
+                {item.renderIcon()}
 
-            {/* 하단 텍스트 라벨 */}
-            <span className="text-[11px] sm:text-xs text-neutral-300 font-medium group-hover:text-white transition-colors mt-2 text-center leading-tight line-clamp-2 max-w-[76px] sm:max-w-[88px]">
-              {item.title}
-            </span>
-          </button>
-        ))}
+                {/* 우측 상단 'N' 신규 배지 */}
+                {item.hasNewBadge && (
+                  <div className="absolute -top-1 -right-1 z-10 w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-full bg-[#ff153c] text-white text-[10px] sm:text-[11px] font-black flex items-center justify-center shadow-lg border border-black animate-bounce">
+                    N
+                  </div>
+                )}
+              </div>
+
+              {/* 하단 텍스트 라벨 (독 확대 시 가독성 및 정렬 유지) */}
+              <span
+                className={`text-[11px] sm:text-xs transition-all duration-200 mt-2.5 text-center leading-tight line-clamp-2 max-w-[80px] sm:max-w-[92px] ${
+                  dock.diff === 0
+                    ? 'text-white font-bold scale-105 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]'
+                    : dock.diff === 1
+                    ? 'text-neutral-200 font-semibold'
+                    : 'text-neutral-400 font-medium'
+                }`}
+              >
+                {item.title}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
