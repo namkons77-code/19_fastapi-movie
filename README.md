@@ -4,37 +4,64 @@
 
 ---
 
-## 📸 주요 기능 및 디자인 시스템
+## 🐳 Docker를 이용한 AWS EC2 배포 가이드
 
-1. **모던 다크 테마 & 프리미엄 레드 포인트**
-   - 딥 블랙(`#000000`) 배경과 강렬한 레드(`#ff153c`) 포인트 컬러
-   - 스크롤 시 부드럽게 전환되는 블랙 블러(`backdrop-blur`) 상단 글로벌 네비게이션(GNB)
-   - 홈 / 시리즈 / 영화 / 라이브 / 글로벌관 탭 전환
+### 1. 사전 준비 (AWS 콘솔)
+1. **EC2 인스턴스 생성**: Ubuntu 22.04 또는 24.04 LTS (`t2.micro` / `t3.micro` 프리티어)
+2. **보안 그룹(Security Group) 인바운드 규칙 설정**:
+   - `HTTP (80)`: 0.0.0.0/0
+   - `HTTPS (443)`: 0.0.0.0/0
+   - `SSH (22)`: 내 IP (또는 0.0.0.0/0)
+3. **SSH 키페어(`.pem`) 다운로드**
 
-2. **대형 히어로 배너 슬라이더 (Hero Slider)**
-   - 대형 백드롭 비주얼, 장르/평점/연령등급 뱃지, 부드러운 그라데이션 오버레이
-   - 6초 주기 자동 슬라이드, 일시 정지, 슬라이드 넘버링 인디케이터(`01 / 06`)
-   - '시청하기' 및 '상세정보' 원클릭 인터랙션
+---
 
-3. **오늘의 실시간 인기 TOP 20**
-   - 1위부터 20위까지의 **초대형 이탤릭 볼드 랭킹 넘버**와 포스터 카드가 결합된 시그니처 랭킹 캐러셀
-   - 마우스 호버 시 스케일업 및 플레이 버튼 오버레이
+### 2. EC2 서버 최초 설정 (원클릭)
+SSH로 EC2 인스턴스에 접속한 뒤 아래 명령어를 실행합니다:
 
-4. **다양한 카테고리 큐레이션 가로 슬라이더**
-   - 단독 오리지널 & 독점작, 지금 가장 많이 본 영화, 화제의 인기 시리즈, 글로벌 독점 컬렉션 등
-   - 좌우 슬라이드 화살표 네비게이션 및 부드러운 스크롤
+```bash
+# 1. 깃허브 저장소 클론
+git clone https://github.com/<your-username>/<your-repo-name>.git
+cd <your-repo-name>
 
-5. **실시간 라이브 TV 채널 (Live Channels)**
-   - 주요 방송 채널 편성표 (실시간 시청률, 타임라인 프로그레스 바)
-   - 고화질 실시간 대형 프리뷰 플레이어
+# 2. Docker & Docker Compose 원클릭 셋업 스크립트 실행
+chmod +x setup-ec2.sh deploy.sh
+./setup-ec2.sh
 
-6. **실시간 검색 & 인기 검색어 (Search Modal)**
-   - 1위~10위 실시간 인기 검색어 순위 제공
-   - 영화/TV 통합 검색 및 포스터 그리드 결과 노출
+# 3. Docker 그룹 권한 즉시 적용
+newgrp docker
+```
 
-7. **상세 모달 & 유튜브 트레일러 플레이어 (Detail Modal)**
-   - 공식 유튜브 예고편(Trailer) 임베드 재생
-   - 시놉시스, 주요 출연진 프로필 사진, 개봉일, 평점, 비슷한 추천 작품 큐레이션
+---
+
+### 3. 환경 변수 설정 및 첫 배포 실행
+```bash
+# .env 생성 및 TMDB API 키 입력
+cp .env.example .env
+nano .env   # TMDB_API_KEY 및 TMDB_ACCESS_TOKEN 입력 후 Ctrl+O, Enter, Ctrl+X
+
+# 배포 스크립트 실행 (빌드 & 컨테이너 가동)
+./deploy.sh
+```
+
+배포가 완료되면 브라우저에서 `http://<EC2_퍼블릭_IPv4_주소>`로 접속하시면 서비스가 바로 열립니다.
+
+---
+
+### 4. 코드 수정 후 지속적 배포 (GitHub 연동)
+
+#### 방법 A: EC2 서버에서 원클릭 업데이트 (간편 방식)
+로컬에서 코드를 수정하고 깃허브에 push한 뒤, EC2 터미널에서 다음 명령어 한 줄만 실행하면 됩니다:
+```bash
+./deploy.sh
+```
+*(최신 코드 Git Pull ➜ Docker 이미지 무중단 빌드 & 교체 ➜ 불필요한 구버전 이미지 정리가 자동 수행됩니다.)*
+
+#### 방법 B: GitHub Actions 완전 자동 배포 (CI/CD)
+GitHub 저장소 `Settings > Secrets and variables > Actions`에 아래 시크릿을 등록하면, `main` 브랜치에 push할 때마다 EC2에 자동으로 무중단 배포됩니다:
+- `EC2_HOST`: EC2 퍼블릭 IP
+- `EC2_USERNAME`: `ubuntu`
+- `EC2_SSH_KEY`: 다운로드받은 `.pem` 파일의 전체 내용
 
 ---
 
@@ -42,76 +69,49 @@
 
 ```
 19_fastapi-movie/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml        # GitHub Actions EC2 자동 배포 파이프라인
 ├── backend/                  # FastAPI 백엔드
 │   ├── app/
-│   │   ├── config.py         # .env 기반 TMDB 키 및 환경설정 로더
-│   │   ├── main.py           # FastAPI 서버 엔트리포인트 및 CORS
+│   │   ├── config.py
+│   │   ├── main.py
 │   │   ├── services/
-│   │   │   ├── tmdb.py       # TMDB API 비동기 httpx 클라이언트
-│   │   │   └── mock_data.py  # 키 미입력 시 고품질 폴백 데이터
 │   │   └── routers/
-│   │       ├── media.py      # 홈 피드, 실시간 TOP 20, 배너, 검색, 상세정보
-│   │       ├── movies.py     # 영화 전용 피드
-│   │       ├── tv.py         # 시리즈 전용 피드
-│   │       └── live.py       # 실시간 TV 채널 편성표
-│   ├── .env                  # TMDB API 키 & Secret 키
+│   ├── Dockerfile            # 백엔드 경량 Docker 이미지 정의
+│   ├── .dockerignore
+│   ├── .env
 │   ├── .env.example
 │   └── requirements.txt
 ├── frontend/                 # React 19 + Vite 8 + Tailwind CSS
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Navbar.tsx        # 상단 네비게이션 (CINEFLIX)
-│   │   │   ├── BannerHero.tsx    # 메인 풀스크린 롤링 배너
-│   │   │   ├── TopRankingRow.tsx # 실시간 TOP 20 랭킹
-│   │   │   ├── ContentRow.tsx    # 가로 스크롤 캐러셀
-│   │   │   ├── ContentCard.tsx   # 콘텐츠 포스터 카드
-│   │   │   ├── DetailModal.tsx   # 유튜브 공식 예고편 재생 & 상세 모달
-│   │   │   ├── LiveChannels.tsx  # 실시간 TV 채널 편성표 & 라이브 플레이어
-│   │   │   ├── SearchModal.tsx   # 실시간 인기 검색어 1~10위 & 검색
-│   │   │   └── Footer.tsx        # 플랫폼 푸터
 │   │   ├── api/
-│   │   │   └── client.ts         # FastAPI 백엔드 연동 Axios 클라이언트
 │   │   ├── types/
-│   │   ├── App.tsx
-│   │   └── index.css
-│   └── vite.config.ts            # Vite 프록시 (/api -> http://127.0.0.1:8000)
-├── .env                          # 루트 환경변수 파일
+│   │   └── App.tsx
+│   ├── Dockerfile            # Multi-stage 빌드 Dockerfile
+│   ├── nginx.conf            # Nginx SPA 라우팅 및 /api 리버스 프록시
+│   ├── .dockerignore
+│   └── vite.config.ts
+├── docker-compose.yml        # 프론트엔드 + 백엔드 통합 오케스트레이션
+├── deploy.sh                 # EC2 원클릭 자동 배포/업데이트 스크립트
+├── setup-ec2.sh              # EC2 인스턴스 Docker 원클릭 셋업 스크립트
+├── .dockerignore
+├── .gitignore                # API 키 및 보안 파일 보호
+├── .env                      # 루트 환경변수 파일
 └── README.md
 ```
 
 ---
 
-## 🔑 환경 변수 (.env) 설정
+## 💻 로컬 개발 환경 실행
 
-[The Movie Database (TMDB)](https://www.themoviedb.org/) 회원가입 후 `설정 > API` 메뉴에서 API Key를 발급받아 `.env` 파일에 입력합니다:
-
-```env
-# TMDB v3 API Key (32자리)
-TMDB_API_KEY=your_tmdb_api_key_here
-
-# TMDB v4 Read Access Token (Secret Key 역할)
-TMDB_SECRET_KEY=your_tmdb_access_token_here
-TMDB_ACCESS_TOKEN=your_tmdb_access_token_here
-
-# 백엔드 포트
-PORT=8000
-```
-
----
-
-## 🚀 실행 방법
-
-### 1. 백엔드 (FastAPI) 실행
 ```bash
+# 백엔드 실행 (포트 8000)
 cd backend
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-- API 서버: `http://localhost:8000`
-- Swagger 문서: `http://localhost:8000/docs`
 
-### 2. 프론트엔드 (React Vite) 실행
-```bash
+# 프론트엔드 실행 (포트 5173)
 cd frontend
 npm run dev
 ```
-- 브라우저 접속: `http://localhost:5173`

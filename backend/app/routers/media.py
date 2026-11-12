@@ -12,6 +12,11 @@ async def get_hero_banners():
 async def get_top20():
     return await tmdb_service.get_top20_ranking()
 
+@router.get("/shortcuts")
+async def get_shortcuts():
+    """TMDB 기반 퀵 바로가기 12개 카테고리"""
+    return await tmdb_service.get_shortcuts()
+
 @router.get("/search")
 async def search_media(query: str = Query(..., min_length=1, description="검색어")):
     return await tmdb_service.search(query)

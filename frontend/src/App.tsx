@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar, type NavTab } from './components/Navbar';
 import { BannerHero } from './components/BannerHero';
+import { QuickShortcutBar, type ShortcutItem } from './components/QuickShortcutBar';
+import { ShortcutModal } from './components/ShortcutModal';
 import { TopRankingRow } from './components/TopRankingRow';
 import { ContentRow } from './components/ContentRow';
 import { DetailModal } from './components/DetailModal';
@@ -20,6 +22,10 @@ export const App: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
   const [autoPlayTrailer, setAutoPlayTrailer] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedShortcut, setSelectedShortcut] = useState<ShortcutItem | null>(null);
+
+  // 섹션 참조 (오리지널 바로가기용)
+  const originalSectionRef = useRef<HTMLDivElement>(null);
 
   // 탭 변경 시 해당 피드 로딩
   useEffect(() => {
@@ -55,6 +61,14 @@ export const App: React.FC = () => {
     setSelectedItem(item);
   };
 
+  const handleSelectShortcut = (shortcut: ShortcutItem) => {
+    if (shortcut.id === 'original' && originalSectionRef.current) {
+      originalSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setSelectedShortcut(shortcut);
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col selection:bg-[#ff153c] selection:text-white">
       {/* 고정 상단 네비게이션 헤더 */}
@@ -79,7 +93,10 @@ export const App: React.FC = () => {
               onPlay={handlePlay}
             />
 
-            <div className="-mt-8 sm:-mt-16 lg:-mt-20 relative z-20 space-y-4 pb-12">
+            {/* 티빙 스타일 원형 바로가기 퀵 메뉴 바 */}
+            <QuickShortcutBar onSelectShortcut={handleSelectShortcut} />
+
+            <div className="relative z-20 space-y-4 pb-12 mt-2">
               <div className="px-4 sm:px-8 lg:px-12 mb-2">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0064ff]/20 text-[#0064ff] border border-[#0064ff]/40 rounded-full text-xs font-bold">
                   <span>글로벌 프리미엄 컬렉션</span>
@@ -118,8 +135,11 @@ export const App: React.FC = () => {
               onPlay={handlePlay}
             />
 
+            {/* 티빙 공식 원형 바로가기 퀵 메뉴 바 (KBO 리그, 100일의 거짓말, 오리지널 등 12개) */}
+            <QuickShortcutBar onSelectShortcut={handleSelectShortcut} />
+
             {/* 본문 큐레이션 행 리스트 */}
-            <div className="-mt-8 sm:-mt-16 lg:-mt-20 relative z-20 space-y-2 sm:space-y-4 pb-12">
+            <div className="relative z-20 space-y-2 sm:space-y-4 pb-12 mt-2">
               {feedData.sections.map((section) => {
                 if (section.type === 'ranking') {
                   return (
@@ -132,15 +152,21 @@ export const App: React.FC = () => {
                     />
                   );
                 }
+
+                const isOriginalSection = section.id.includes('orig');
                 return (
-                  <ContentRow
+                  <div
                     key={section.id}
-                    title={section.title}
-                    items={section.items}
-                    onSelect={handleOpenDetail}
-                    onPlay={handlePlay}
-                    aspectRatio="poster"
-                  />
+                    ref={isOriginalSection ? originalSectionRef : undefined}
+                  >
+                    <ContentRow
+                      title={section.title}
+                      items={section.items}
+                      onSelect={handleOpenDetail}
+                      onPlay={handlePlay}
+                      aspectRatio="poster"
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -150,6 +176,12 @@ export const App: React.FC = () => {
 
       {/* 푸터 */}
       <Footer />
+
+      {/* 티빙 퀵 바로가기 팝업 모달 */}
+      <ShortcutModal
+        item={selectedShortcut}
+        onClose={() => setSelectedShortcut(null)}
+      />
 
       {/* 상세 모달 & 트레일러 플레이어 */}
       <DetailModal

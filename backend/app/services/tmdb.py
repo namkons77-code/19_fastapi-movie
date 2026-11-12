@@ -275,4 +275,136 @@ class TMDBService:
                 })
         return results
 
+    async def get_shortcuts(self) -> List[Dict[str, Any]]:
+        """TMDB 기반 퀵 바로가기 12개 카테고리"""
+        # 인기 영화 및 TV 가져오기
+        pop_movies = await self.get_popular_movies()
+        pop_tv = await self.get_popular_tv()
+        now_movies = await self.get_now_playing_movies()
+
+        # 장르별 대표작
+        action_movies = await self.get_genre_content("movie", 28)
+        romance_movies = await self.get_genre_content("movie", 10749)
+        sf_movies = await self.get_genre_content("movie", 878)
+        thriller_movies = await self.get_genre_content("movie", 53)
+        animation_movies = await self.get_genre_content("movie", 16)
+        comedy_movies = await self.get_genre_content("movie", 35)
+        crime_movies = await self.get_genre_content("movie", 80)
+
+        def get_img(items, fallback_idx=0):
+            if items and len(items) > 0 and items[0].get("poster_url"):
+                return items[0]["poster_url"]
+            fallbacks = [
+                "https://image.tmdb.org/t/p/w500/8d1hU3mJ93J51a7w6T9d4y9U0zX.jpg",
+                "https://image.tmdb.org/t/p/w500/fW9k1hYq9xHh4Z0Yp4Xp2P4Zk0K.jpg",
+                "https://image.tmdb.org/t/p/w500/9aA46cR604e3X5Y5g1k68c8W5H8.jpg",
+                "https://image.tmdb.org/t/p/w500/vpnVM9B6NMmQpWeZvzLvDESb2QY.jpg",
+                "https://image.tmdb.org/t/p/w500/b33nnKl1GSFbao4l3fZDDqsMx0F.jpg",
+            ]
+            return fallbacks[fallback_idx % len(fallbacks)]
+
+        return [
+            {
+                "id": "trending",
+                "title": "오늘의 트렌딩",
+                "subtitle": "TMDB 실시간 화제작",
+                "has_badge": True,
+                "badge_text": "HOT",
+                "image_url": get_img(pop_movies, 0),
+                "items": pop_movies[:8]
+            },
+            {
+                "id": "now_playing",
+                "title": "최신 개봉작",
+                "subtitle": "극장 동시 상영작",
+                "has_badge": True,
+                "badge_text": "NEW",
+                "image_url": get_img(now_movies, 1),
+                "items": now_movies[:8]
+            },
+            {
+                "id": "action",
+                "title": "액션 블록버스터",
+                "subtitle": "스펙터클 액션 컬렉션",
+                "has_badge": False,
+                "image_url": get_img(action_movies, 2),
+                "items": action_movies[:8]
+            },
+            {
+                "id": "romance",
+                "title": "로맨스 & 멜로",
+                "subtitle": "설레는 사랑 이야기",
+                "has_badge": False,
+                "image_url": get_img(romance_movies, 3),
+                "items": romance_movies[:8]
+            },
+            {
+                "id": "scifi",
+                "title": "SF & 판타지",
+                "subtitle": "상상력의 한계를 넘어",
+                "has_badge": False,
+                "image_url": get_img(sf_movies, 4),
+                "items": sf_movies[:8]
+            },
+            {
+                "id": "thriller",
+                "title": "공포 & 스릴러",
+                "subtitle": "심장을 조여오는 서스펜스",
+                "has_badge": True,
+                "badge_text": "N",
+                "image_url": get_img(thriller_movies, 0),
+                "items": thriller_movies[:8]
+            },
+            {
+                "id": "animation",
+                "title": "명작 애니메이션",
+                "subtitle": "감동과 재미의 세계",
+                "has_badge": False,
+                "image_url": get_img(animation_movies, 1),
+                "items": animation_movies[:8]
+            },
+            {
+                "id": "comedy",
+                "title": "유쾌한 코미디",
+                "subtitle": "유쾌하게 웃고 싶을 때",
+                "has_badge": False,
+                "image_url": get_img(comedy_movies, 2),
+                "items": comedy_movies[:8]
+            },
+            {
+                "id": "crime",
+                "title": "범죄 & 미스터리",
+                "subtitle": "치밀한 두뇌 추리극",
+                "has_badge": False,
+                "image_url": get_img(crime_movies, 3),
+                "items": crime_movies[:8]
+            },
+            {
+                "id": "tv_popular",
+                "title": "인기 시리즈",
+                "subtitle": "정주행 필수 TV 드라마",
+                "has_badge": True,
+                "badge_text": "HOT",
+                "image_url": get_img(pop_tv, 4),
+                "items": pop_tv[:8]
+            },
+            {
+                "id": "top_rated",
+                "title": "역대 최고 평점",
+                "subtitle": "평점 8.5 이상 마스터피스",
+                "has_badge": False,
+                "image_url": get_img(pop_movies, 1),
+                "items": pop_movies[:8]
+            },
+            {
+                "id": "random_pick",
+                "title": "오늘 뭐 볼까?",
+                "subtitle": "TMDB AI 맞춤 추천",
+                "has_badge": True,
+                "badge_text": "PICK",
+                "image_url": get_img(pop_tv, 0),
+                "items": pop_movies[:8]
+            }
+        ]
+
 tmdb_service = TMDBService()

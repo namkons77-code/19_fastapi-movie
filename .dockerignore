@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+README.md
+node_modules
+dist
+__pycache__
+*.pyc
+*.pem
+*.key
