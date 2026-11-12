@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -14,14 +15,34 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Validate GitHub Secrets
+        run: |
+          if [ -z "${{ secrets.EC2_SSH_KEY }}" ]; then
+            echo "::error title=Missing Secret::GitHub Repository Secret 'EC2_SSH_KEY'가 설정되지 않았습니다."
+            echo "================================================================="
+            echo "❌ 에러: GitHub Repository Secrets에 'EC2_SSH_KEY'가 등록되지 않았습니다."
+            echo ""
+            echo "해결 방법:"
+            echo "1. GitHub 저장소 > Settings > Secrets and variables > Actions 이동"
+            echo "2. 'New repository secret' 클릭"
+            echo "3. Name: EC2_SSH_KEY 입력"
+            echo "4. Value: movie-key.pem 파일 내용 전체 붙여넣기 후 추가"
+            echo "================================================================="
+            exit 1
+          fi
+
       - name: Execute Remote SSH Commands on AWS EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}          # EC2 퍼블릭 IP 또는 도메인
-          username: ${{ secrets.EC2_USERNAME }}  # ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}        # .pem 키 내용 전체
+          host: ${{ secrets.EC2_HOST || '13.239.196.29' }}
+          username: ${{ secrets.EC2_USERNAME || secrets.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
+          timeout: 30s
+          command_timeout: 15m
           script: |
-            cd ~/19_fastapi-movie || cd ~/movie-app || cd ~/*movie*
+            echo "🚀 EC2 배포 작업 시작..."
+            cd ~/19_fastapi-movie
             chmod +x deploy.sh
             ./deploy.sh
+            echo "✅ EC2 배포 작업 완료!"
