@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-red: #ff153c;
+    --brand-red-hover: #e5092b;
+    --brand-bg: #000000;
+    --brand-card-bg: #141517;
+    --brand-text: #ffffff;
+    --brand-subtext: #a3a3a3;
+    --brand-border: #2b2b2b;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html, body {
+    background-color: #000000;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* 커스텀 스크롤바 숨기기 (캐러셀용) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* 랭킹 숫자 폰트 스타일 */
+.rank-number {
+  font-family: Impact, "Arial Black", -apple-system, sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 0.8;
+  color: #ffffff;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 0, 0, 0.8);
+  user-select: none;
+}
+
+/* 메인 그라데이션 오버레이 */
+.hero-gradient-overlay {
+  background: linear-gradient(
+    0deg,
+    #000000 0%,
+    rgba(0, 0, 0, 0.85) 15%,
+    rgba(0, 0, 0, 0.4) 50%,
+    rgba(0, 0, 0, 0.1) 80%,
+    transparent 100%
+  );
+}
+
+.hero-side-gradient {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.75) 25%,
+    rgba(0, 0, 0, 0.3) 50%,
+    transparent 100%
+  );
+}
