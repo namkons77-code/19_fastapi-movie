@@ -83,68 +83,73 @@ export const DetailModal: React.FC<DetailModalProps> = ({
         } max-h-[92vh] flex flex-col bg-[#141517] rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 text-white transition-all duration-300 my-auto`}
       >
         {/* 상단 컨트롤 바 (플로팅 헤더) */}
-        <div className="absolute top-3 left-3 right-3 z-40 pointer-events-none flex items-center justify-between">
-          {/* 좌측 상태 배지 */}
-          <div className="pointer-events-auto flex items-center gap-2">
-            {isPlayingTrailer && currentVideoKey ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[#ff153c]/40 text-white text-xs font-bold shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-[#ff153c] animate-pulse" />
-                <span className="truncate max-w-[150px] sm:max-w-[280px]">
-                  {currentVideo?.name || '예고편 재생 중'}
+        <div className="absolute top-3 left-3 right-3 z-40 pointer-events-none flex flex-col gap-2.5">
+          {/* 상단 1번째 줄: 좌측 상태 배지 & 우측 모달 닫기(X) 버튼 */}
+          <div className="flex items-center justify-between w-full">
+            {/* 좌측 상태 배지 */}
+            <div className="pointer-events-auto flex items-center gap-2">
+              {isPlayingTrailer && currentVideoKey ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[#ff153c]/40 text-white text-xs font-bold shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-[#ff153c] animate-pulse" />
+                  <span className="truncate max-w-[150px] sm:max-w-[280px]">
+                    {currentVideo?.name || '예고편 재생 중'}
+                  </span>
                 </span>
-              </span>
-            ) : item.badge ? (
-              <span className="px-2.5 py-1 bg-[#ff153c] text-white rounded-md text-xs font-bold shadow-lg">
-                {item.badge}
-              </span>
-            ) : null}
+              ) : item.badge ? (
+                <span className="px-2.5 py-1 bg-[#ff153c] text-white rounded-md text-xs font-bold shadow-lg">
+                  {item.badge}
+                </span>
+              ) : null}
+            </div>
+
+            {/* 우측 모달 닫기 버튼 */}
+            <div className="pointer-events-auto">
+              <button
+                onClick={onClose}
+                aria-label="닫기"
+                title="닫기 (ESC)"
+                className="p-2 rounded-full bg-black/85 hover:bg-[#ff153c] text-white transition border border-neutral-700 backdrop-blur-md shadow-lg hover:scale-105 active:scale-95"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
-          {/* 우측 컨트롤 버튼들 */}
-          <div className="pointer-events-auto flex items-center gap-2">
-            {/* 극장 모드 토글 (영상 재생 시) */}
-            {isPlayingTrailer && currentVideoKey && (
-              <button
-                onClick={() => setIsTheaterMode((prev) => !prev)}
-                title={isTheaterMode ? '기본 화면으로 축소' : '대화면 극장 모드로 확대'}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
-              >
-                {isTheaterMode ? (
-                  <>
-                    <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="hidden sm:inline">기본 화면</span>
-                  </>
-                ) : (
-                  <>
-                    <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="hidden sm:inline">극장 모드</span>
-                  </>
-                )}
-              </button>
-            )}
+          {/* 상단 2번째 줄 (한 줄 아래 배치): 기본 화면/극장 모드 & 영상 정지 버튼 */}
+          {isPlayingTrailer && currentVideoKey && (
+            <div className="flex items-center justify-end w-full">
+              <div className="pointer-events-auto flex items-center gap-2">
+                {/* 극장 모드 / 기본 화면 토글 버튼 */}
+                <button
+                  onClick={() => setIsTheaterMode((prev) => !prev)}
+                  title={isTheaterMode ? '기본 화면으로 축소' : '대화면 극장 모드로 확대'}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
+                >
+                  {isTheaterMode ? (
+                    <>
+                      <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>기본 화면</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+                      <span>극장 모드</span>
+                    </>
+                  )}
+                </button>
 
-            {/* 영상 정지 / 포스터 전환 */}
-            {isPlayingTrailer && currentVideoKey && (
-              <button
-                onClick={() => setIsPlayingTrailer(false)}
-                title="영상 멈추고 포스터 보기"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
-              >
-                <Film className="w-3.5 h-3.5 text-[#ff153c]" />
-                <span>영상 정지</span>
-              </button>
-            )}
-
-            {/* 모달 닫기 버튼 */}
-            <button
-              onClick={onClose}
-              aria-label="닫기"
-              title="닫기 (ESC)"
-              className="p-2 rounded-full bg-black/85 hover:bg-[#ff153c] text-white transition border border-neutral-700 backdrop-blur-md shadow-lg hover:scale-105 active:scale-95"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+                {/* 영상 정지 / 포스터 보기 버튼 */}
+                <button
+                  onClick={() => setIsPlayingTrailer(false)}
+                  title="영상 멈추고 포스터 보기"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
+                >
+                  <Film className="w-3.5 h-3.5 text-[#ff153c]" />
+                  <span>영상 정지</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 상단 미디어 영역 (예고편 영상 플레이어 또는 백드롭) */}
