@@ -198,7 +198,8 @@ class TMDBService:
     async def get_details(self, media_type: str, item_id: int) -> Optional[Dict[str, Any]]:
         endpoint = f"{media_type}/{item_id}"
         data = await self._fetch(endpoint, {
-            "append_to_response": "credits,videos,similar"
+            "append_to_response": "credits,videos,similar",
+            "include_video_language": "ko,en,null"
         })
 
         if not data:
@@ -227,14 +228,23 @@ class TMDBService:
 
         videos = []
         if "videos" in data and "results" in data["videos"]:
-            for v in data["videos"]["results"]:
-                if v.get("site") == "YouTube":
-                    videos.append({
-                        "key": v.get("key"),
-                        "name": v.get("name"),
-                        "type": v.get("type"),
-                        "site": "YouTube"
-                    })
+            raw_videos = [v for v in data["videos"]["results"] if v.get("site") == "YouTube" and v.get("key")]
+            
+            def video_sort_key(v):
+                is_ko = 1 if v.get("iso_639_1") == "ko" else 0
+                is_trailer = 2 if v.get("type") == "Trailer" else (1 if v.get("type") == "Teaser" else 0)
+                is_official = 1 if v.get("official") else 0
+                return (is_ko, is_trailer, is_official)
+
+            raw_videos.sort(key=video_sort_key, reverse=True)
+
+            for v in raw_videos:
+                videos.append({
+                    "key": v.get("key"),
+                    "name": v.get("name"),
+                    "type": v.get("type"),
+                    "site": "YouTube"
+                })
 
         similar = []
         if "similar" in data and "results" in data["similar"]:

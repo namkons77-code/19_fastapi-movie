@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Play, Star, Clock, Calendar, Users, Film } from 'lucide-react';
+import { X, Play, Star, Clock, Calendar, Users, Film, Maximize2, Minimize2 } from 'lucide-react';
 import type { MediaItem, MediaDetails } from '../types';
 import { fetchMediaDetails } from '../api/client';
 
@@ -18,11 +18,20 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 }) => {
   const [details, setDetails] = useState<MediaDetails | null>(null);
   const [isPlayingTrailer, setIsPlayingTrailer] = useState(autoPlayTrailer);
+  const [isTheaterMode, setIsTheaterMode] = useState(false);
+  const [selectedVideoKey, setSelectedVideoKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (!item) return;
 
     setIsPlayingTrailer(autoPlayTrailer);
+    if (autoPlayTrailer) {
+      setIsTheaterMode(true);
+    } else {
+      setIsTheaterMode(false);
+    }
+    setSelectedVideoKey(null);
+
     fetchMediaDetails(item.media_type, item.id)
       .then((data) => {
         setDetails(data);
@@ -44,40 +53,120 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 
   if (!item) return null;
 
-  const trailerVideo = details?.videos?.find(
-    (v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser' || v.type === 'Clip')
-  ) || details?.videos?.[0];
+  // 가용 유튜브 비디오 추출 및 정렬
+  const availableVideos = details?.videos?.filter(
+    (v) => v.site === 'YouTube' && v.key
+  ) || [];
+
+  const defaultVideo =
+    availableVideos.find((v) => v.type === 'Trailer') ||
+    availableVideos.find((v) => v.type === 'Teaser') ||
+    availableVideos[0] ||
+    (item.trailer_key
+      ? { key: item.trailer_key, name: '공식 트레일러', site: 'YouTube', type: 'Trailer' }
+      : null);
+
+  const currentVideoKey = selectedVideoKey || defaultVideo?.key || null;
+  const currentVideo = availableVideos.find((v) => v.key === currentVideoKey) || defaultVideo;
 
   const bgImage = details?.backdrop_url || item.backdrop_url || item.poster_url;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden animate-fade-in">
       {/* 닫기 배경 클릭 */}
       <div className="fixed inset-0" onClick={onClose} />
 
-      {/* 모달 윈도우 */}
-      <div className="relative z-10 w-full max-w-4xl bg-[#141517] rounded-xl overflow-hidden shadow-2xl border border-neutral-800 text-white my-8">
-        {/* 상단 닫기 버튼 */}
-        <button
-          onClick={onClose}
-          aria-label="닫기"
-          className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/70 hover:bg-black/90 text-white transition border border-neutral-700/80"
-        >
-          <X className="w-5 h-5" />
-        </button>
+      {/* 모달 윈도우: 뷰포트 내 최적화 (화면 잘림 원천 방지) */}
+      <div
+        className={`relative z-10 w-full ${
+          isTheaterMode ? 'max-w-6xl' : 'max-w-4xl'
+        } max-h-[92vh] flex flex-col bg-[#141517] rounded-2xl overflow-hidden shadow-2xl border border-neutral-800 text-white transition-all duration-300 my-auto`}
+      >
+        {/* 상단 컨트롤 바 (플로팅 헤더) */}
+        <div className="absolute top-3 left-3 right-3 z-40 pointer-events-none flex items-center justify-between">
+          {/* 좌측 상태 배지 */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {isPlayingTrailer && currentVideoKey ? (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 backdrop-blur-md border border-[#ff153c]/40 text-white text-xs font-bold shadow-lg">
+                <span className="w-2 h-2 rounded-full bg-[#ff153c] animate-pulse" />
+                <span className="truncate max-w-[150px] sm:max-w-[280px]">
+                  {currentVideo?.name || '예고편 재생 중'}
+                </span>
+              </span>
+            ) : item.badge ? (
+              <span className="px-2.5 py-1 bg-[#ff153c] text-white rounded-md text-xs font-bold shadow-lg">
+                {item.badge}
+              </span>
+            ) : null}
+          </div>
 
-        {/* 상단 미디어 영역 (예고편 영상 또는 백드롭) */}
-        <div className="relative aspect-[16/9] w-full bg-black overflow-hidden">
-          {isPlayingTrailer && trailerVideo ? (
-            <iframe
-              src={`https://www.youtube.com/embed/${trailerVideo.key}?autoplay=1&rel=0&controls=1`}
-              title={trailerVideo.name || '트레일러'}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full border-0"
-            />
+          {/* 우측 컨트롤 버튼들 */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            {/* 극장 모드 토글 (영상 재생 시) */}
+            {isPlayingTrailer && currentVideoKey && (
+              <button
+                onClick={() => setIsTheaterMode((prev) => !prev)}
+                title={isTheaterMode ? '기본 화면으로 축소' : '대화면 극장 모드로 확대'}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
+              >
+                {isTheaterMode ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline">기본 화면</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline">극장 모드</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* 영상 정지 / 포스터 전환 */}
+            {isPlayingTrailer && currentVideoKey && (
+              <button
+                onClick={() => setIsPlayingTrailer(false)}
+                title="영상 멈추고 포스터 보기"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/85 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-bold backdrop-blur-md border border-neutral-700 transition shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Film className="w-3.5 h-3.5 text-[#ff153c]" />
+                <span>영상 정지</span>
+              </button>
+            )}
+
+            {/* 모달 닫기 버튼 */}
+            <button
+              onClick={onClose}
+              aria-label="닫기"
+              title="닫기 (ESC)"
+              className="p-2 rounded-full bg-black/85 hover:bg-[#ff153c] text-white transition border border-neutral-700 backdrop-blur-md shadow-lg hover:scale-105 active:scale-95"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* 상단 미디어 영역 (예고편 영상 플레이어 또는 백드롭) */}
+        <div className="relative w-full flex-shrink-0 bg-black flex items-center justify-center overflow-hidden">
+          {isPlayingTrailer && currentVideoKey ? (
+            <div
+              className="w-full aspect-video mx-auto relative flex items-center justify-center bg-black transition-all duration-300"
+              style={{
+                maxHeight: isTheaterMode ? '70vh' : '52vh',
+                maxWidth: isTheaterMode ? 'calc(70vh * 16 / 9)' : 'calc(52vh * 16 / 9)',
+              }}
+            >
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${currentVideoKey}?autoplay=1&rel=0&controls=1&modestbranding=1&playsinline=1&iv_load_policy=3&enablejsapi=1`}
+                title={currentVideo?.name || item.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="w-full h-full border-0 block"
+              />
+            </div>
           ) : (
-            <>
+            <div className="relative aspect-[16/9] w-full max-h-[50vh] bg-black overflow-hidden">
               {bgImage && (
                 <img
                   src={bgImage}
@@ -90,9 +179,12 @@ export const DetailModal: React.FC<DetailModalProps> = ({
 
               {/* 재생 / 트레일러 버튼 */}
               <div className="absolute inset-0 flex items-center justify-center">
-                {trailerVideo ? (
+                {currentVideoKey ? (
                   <button
-                    onClick={() => setIsPlayingTrailer(true)}
+                    onClick={() => {
+                      setIsPlayingTrailer(true);
+                      setIsTheaterMode(true);
+                    }}
                     className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#ff153c] hover:bg-[#e5092b] text-white font-bold text-sm sm:text-base shadow-2xl transition hover:scale-105 active:scale-95"
                   >
                     <Play className="w-5 h-5 fill-white" />
@@ -108,13 +200,45 @@ export const DetailModal: React.FC<DetailModalProps> = ({
                   </button>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
 
-        {/* 모달 본문 정보 영역 */}
-        <div className="p-5 sm:p-8 space-y-6">
-          {/* 타이틀 및 메타 태그 */}
+        {/* 하단 모달 정보 스크롤 영역 */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 custom-scrollbar bg-[#141517]">
+          {/* 가용 비디오 클립 선택 바 (2개 이상인 경우) */}
+          {availableVideos.length > 1 && (
+            <div className="bg-neutral-900/90 p-3 rounded-xl border border-neutral-800 space-y-2">
+              <div className="flex items-center justify-between text-xs text-neutral-400 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <Film className="w-3.5 h-3.5 text-[#ff153c]" />
+                  <span>영상 클립 선택 ({availableVideos.length}개)</span>
+                </span>
+                <span className="text-[11px] text-neutral-400">클릭 시 해당 영상 재생</span>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                {availableVideos.map((vid) => (
+                  <button
+                    key={vid.key}
+                    onClick={() => {
+                      setSelectedVideoKey(vid.key);
+                      setIsPlayingTrailer(true);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                      currentVideoKey === vid.key
+                        ? 'bg-[#ff153c] text-white shadow-md'
+                        : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white border border-neutral-700/60'
+                    }`}
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span className="truncate max-w-[220px]">{vid.name || vid.type}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 타이틀 및 메타 정보 */}
           <div>
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {item.badge && (

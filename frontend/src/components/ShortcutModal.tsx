@@ -66,7 +66,7 @@ export const ShortcutModal: React.FC<ShortcutModalProps> = ({ item, onClose }) =
             </div>
             <div className="flex items-center gap-2.5 p-3 rounded-lg bg-neutral-900/60 border border-neutral-800">
               <Sparkles className="w-4 h-4 text-purple-400" />
-              <span>티빙 회원 전용 특별 라이브 챗 및 팬 응원존 참여</span>
+              <span>CINEFLIX 회원 전용 특별 라이브 챗 및 팬 응원존 참여</span>
             </div>
           </div>
         </div>
